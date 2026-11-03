@@ -6,12 +6,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ErroImagem, prepararImagem } from "@/lib/utils/imagem";
 
-const TIPOS_ACEITOS = ["image/png", "image/jpeg"];
-const TAMANHO_MAXIMO = 2 * 1024 * 1024; // 2MB de arquivo
-
-/** Mesmo limite do backend (@Size(max = 2_800_000) nos DTOs de imagem). */
-const LIMITE_BASE64 = 2_800_000;
 
 /**
  * Escolhe uma imagem e devolve um data URI base64 num input hidden, para o
@@ -22,7 +18,7 @@ export function SeletorImagem({
   name,
   valorInicial,
   rotulo = "Imagem",
-  descricao = "PNG ou JPG, até 2MB. Opcional.",
+  descricao = "PNG ou JPG, até 10MB. Opcional.",
   Icone = Music2,
   /** `circulo` para foto de perfil, `quadrado` para capa. */
   formato = "quadrado",
@@ -37,34 +33,13 @@ export function SeletorImagem({
   const inputRef = useRef<HTMLInputElement>(null);
   const [imagem, setImagem] = useState<string>(valorInicial ?? "");
 
-  function escolher(arquivo: File) {
-    if (!TIPOS_ACEITOS.includes(arquivo.type)) {
-      toast.error("Formato inválido. Envie uma imagem PNG ou JPG.");
-      return;
+  async function escolher(arquivo: File) {
+    try {
+      // valida tipo e tamanho e reduz para 600px (ver lib/utils/imagem.ts)
+      setImagem(await prepararImagem(arquivo));
+    } catch (erro) {
+      toast.error(erro instanceof ErroImagem ? erro.message : "Não foi possível ler a imagem.");
     }
-    if (arquivo.size > TAMANHO_MAXIMO) {
-      toast.error("A imagem deve ter no máximo 2MB.");
-      return;
-    }
-
-    const leitor = new FileReader();
-    leitor.onerror = () => toast.error("Não foi possível ler o arquivo.");
-    leitor.onload = () => {
-      const dataUri = String(leitor.result);
-
-      /*
-        O backend valida o tamanho do data URI, nao o do arquivo: o base64 infla
-        em ~33%. Conferimos aqui tambem para o usuario ver o erro na hora, em vez
-        de so descobrir quando a API recusar.
-      */
-      if (dataUri.length > LIMITE_BASE64) {
-        toast.error("A imagem é muito grande. Escolha uma menor ou comprima antes.");
-        return;
-      }
-
-      setImagem(dataUri);
-    };
-    leitor.readAsDataURL(arquivo);
   }
 
   const arredondamento = formato === "circulo" ? "rounded-full" : "rounded-md";

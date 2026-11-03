@@ -16,6 +16,13 @@ cache.
 >    outro. A invalidacao apos mutacao e feita com `revalidatePath`. A secao
 >    [Cache e performance](#6-cache-e-performance) explica o raciocinio; leia o aviso em
 >    destaque la.
+> 3. **Imagens sao reduzidas no navegador antes de enviar.** Onde este documento fala em
+>    `FileReader.readAsDataURL` com limite de 2MB, o codigo usa `prepararImagem()` de
+>    `lib/utils/imagem.ts`. Ela aceita PNG/JPG de ate 10MB, reduz para no maximo 600px no
+>    maior lado e confere o limite do backend (2.800.000 caracteres de data URI), sempre com
+>    mensagem dizendo o tamanho. **Motivo:** a foto aparece em varios lugares da pagina e,
+>    no tamanho original, a resposta passava do limite de ~4,5MB da Vercel, que devolvia
+>    500. O contrato da API nao mudou.
 
 > **Escopo:** a API entrega **Autenticacao, Usuario, Playlist, Avaliacao, Artista, Album,
 > Musica e Categoria** — todos os modulos estao no ar. A secao

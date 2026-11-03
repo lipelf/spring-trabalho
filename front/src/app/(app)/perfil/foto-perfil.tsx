@@ -19,13 +19,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { iniciais } from "@/lib/utils/formato";
+import { ErroImagem, prepararImagem } from "@/lib/utils/imagem";
 import type { Usuario } from "@/types/api";
-
-const TIPOS_ACEITOS = ["image/png", "image/jpeg"];
-const TAMANHO_MAXIMO = 2 * 1024 * 1024; // 2MB de arquivo
-
-/** Mesmo limite do backend (@Size(max = 2_800_000) no FotoRequestDTO). */
-const LIMITE_BASE64 = 2_800_000;
 
 export function FotoPerfil({ usuario }: { usuario: Usuario }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,32 +30,20 @@ export function FotoPerfil({ usuario }: { usuario: Usuario }) {
 
   const fotoAtual = previa ?? usuario.foto;
 
-  function escolherArquivo(arquivo: File) {
-    if (!TIPOS_ACEITOS.includes(arquivo.type)) {
-      toast.error("Formato inválido. Envie uma imagem PNG ou JPG.");
+  async function escolherArquivo(arquivo: File) {
+    let dataUri: string;
+    try {
+      // valida tipo e tamanho e reduz para 600px (ver lib/utils/imagem.ts)
+      dataUri = await prepararImagem(arquivo);
+    } catch (erro) {
+      toast.error(erro instanceof ErroImagem ? erro.message : "Não foi possível ler a imagem.");
       return;
     }
-    if (arquivo.size > TAMANHO_MAXIMO) {
-      toast.error("A imagem deve ter no máximo 2MB.");
-      return;
-    }
 
-    const leitor = new FileReader();
+    setPrevia(dataUri);
 
-    leitor.onerror = () => toast.error("Não foi possível ler o arquivo.");
-
-    leitor.onload = () => {
-      const dataUri = String(leitor.result);
-
-      // o base64 infla o arquivo em ~33%: quem manda e o tamanho do data URI
-      if (dataUri.length > LIMITE_BASE64) {
-        toast.error("A imagem é muito grande. Escolha uma menor ou comprima antes.");
-        return;
-      }
-
-      setPrevia(dataUri);
-
-      startTransition(async () => {
+    startTransition(async () => {
+      try {
         const resultado = await atualizarFotoAction(usuario.id, dataUri);
         if (resultado.ok) {
           toast.success("Foto atualizada");
@@ -68,10 +51,12 @@ export function FotoPerfil({ usuario }: { usuario: Usuario }) {
           setPrevia(null); // desfaz a previa se o servidor recusou
           toast.error(resultado.erro);
         }
-      });
-    };
-
-    leitor.readAsDataURL(arquivo);
+      } catch {
+        // falha antes de chegar na action (rede, limite de tamanho da hospedagem...)
+        setPrevia(null);
+        toast.error("Não foi possível enviar a foto. Tente uma imagem menor.");
+      }
+    });
   }
 
   function remover() {
@@ -124,7 +109,7 @@ export function FotoPerfil({ usuario }: { usuario: Usuario }) {
         <div>
           <p className="text-sm font-bold">Foto de perfil</p>
           <p className="text-xs text-texto-suave">
-            PNG ou JPG, até 2MB.
+            PNG ou JPG, até 10MB.
           </p>
         </div>
 
