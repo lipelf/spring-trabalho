@@ -72,6 +72,11 @@ API_URL=http://localhost:8080
 SESSION_SECRET=troque-isto-por-um-valor-aleatorio
 ```
 
+**Em producao (Vercel):** a unica variavel necessaria e `API_URL`, com o dominio publico da
+API no Railway e sem barra no final (ex.: `https://soundhub-api-production.up.railway.app`).
+O `SESSION_SECRET` acima nao e lido pelo codigo atual — o cookie guarda o proprio JWT, ja
+assinado pela API. O passo a passo completo esta na secao **Deploy** do README.
+
 > **Nao use `NEXT_PUBLIC_` para a URL da API.** Tudo que leva esse prefixo e embutido no bundle
 > e fica visivel no navegador. As chamadas passam pelo servidor do Next (ver
 > [secao 3](#3-autenticacao-e-seguranca)).

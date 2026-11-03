@@ -134,6 +134,96 @@ Para testar as rotas protegidas: faca login, copie o `token` da resposta, clique
 
 ---
 
+## Deploy (Neon + Railway + Vercel)
+
+| Parte | Onde | O que ja esta pronto no repositorio |
+|---|---|---|
+| Banco | [Neon](https://neon.tech) | nada a fazer — o Flyway cria as tabelas na primeira subida da API |
+| API | [Railway](https://railway.com) | `java/Dockerfile` (JDK 25) e `java/railway.json` (build e healthcheck) |
+| Front | [Vercel](https://vercel.com) | detecta o Next sozinho; `front/.env.example` mostra a variavel |
+
+Faca nessa ordem: banco → API → front → voltar na API para liberar o CORS.
+
+### 1. Banco no Neon
+
+1. Crie um projeto. Regiao: **AWS South America (Sao Paulo)**, se disponivel.
+2. Em **Connect**, desligue a opcao **Connection pooling** e copie a string. Ela vem assim:
+   ```
+   postgresql://neondb_owner:SENHA@ep-xxxx.sa-east-1.aws.neon.tech/neondb?sslmode=require
+   ```
+   > Use a conexao **direta** (host sem `-pooler`). O Flyway roda as migrations com
+   > comandos que nao combinam com o pooler em modo transacao.
+3. Separe em tres pedacos, que viram as variaveis da API:
+   | Variavel | Valor |
+   |---|---|
+   | `DB_URL` | `jdbc:postgresql://ep-xxxx.sa-east-1.aws.neon.tech/neondb?sslmode=require` |
+   | `DB_USER` | `neondb_owner` |
+   | `DB_PASSWORD` | `SENHA` |
+
+   Repare: o `DB_URL` comeca com `jdbc:` e **nao** leva usuario e senha.
+
+### 2. API no Railway
+
+1. **New Project → Deploy from GitHub repo** e escolha este repositorio.
+2. No servico criado, em **Settings**:
+   - **Root Directory:** `java`
+   - **Config-as-code → Railway Config File:** `/java/railway.json` (o caminho e absoluto, a
+     partir da raiz do repositorio — o Railway nao aplica o Root Directory a esse arquivo)
+3. Em **Variables**, adicione:
+   | Variavel | Valor |
+   |---|---|
+   | `DB_URL`, `DB_USER`, `DB_PASSWORD` | os do passo 1 |
+   | `JWT_SECRET` | uma chave nova em Base64 (veja abaixo) — **nao use a padrao do yml** |
+   | `PORT` | `8080` |
+   | `LOG_LEVEL` | `INFO` |
+   | `CORS_ORIGENS` | deixe para o passo 4 |
+
+   Para gerar o `JWT_SECRET`, no Git Bash: `openssl rand -base64 48`
+4. Em **Settings → Networking → Generate Domain**, porta **8080**. Voce ganha algo como
+   `https://soundhub-api-production.up.railway.app`.
+5. Espere o deploy ficar verde (o build Maven leva alguns minutos na primeira vez) e abra
+   `https://<dominio>/swagger-ui.html`. Se o Swagger abriu, a API conectou no Neon e as
+   migrations rodaram.
+
+### 3. Front na Vercel
+
+1. **Add New → Project** e importe o repositorio.
+2. **Root Directory:** `front`. O framework (Next.js) e os comandos de build sao detectados
+   sozinhos.
+3. Em **Environment Variables**: `API_URL` = o dominio do Railway, **sem barra no final**
+   (`https://soundhub-api-production.up.railway.app`). Sem prefixo `NEXT_PUBLIC_`.
+4. **Deploy**. Voce ganha algo como `https://soundhub.vercel.app`.
+
+> Se trocar o `API_URL` depois, faca **Redeploy** — variavel nova so vale num build novo.
+
+### 4. Liberar o CORS
+
+Volte no Railway e crie `CORS_ORIGENS` com o dominio da Vercel, sem barra no final
+(`https://soundhub.vercel.app`). Para mais de um, separe por virgula. O Railway refaz o deploy
+sozinho.
+
+> Hoje quem chama a API e o servidor do Next, nao o navegador, entao o CORS quase nunca entra
+> em jogo. Mas sem ele qualquer chamada direta do navegador seria bloqueada.
+
+### 5. Conferir
+
+Abra o front e percorra: registrar → login → criar playlist → adicionar musica → avaliar.
+
+### Problemas comuns
+
+| Sintoma | Causa provavel |
+|---|---|
+| Build do Railway falha com `cannot find symbol getNome()` | nao usou o Dockerfile (JDK errado). Confira o Config File `/java/railway.json` |
+| API cai na subida com erro do Flyway | `DB_URL` apontando para o host `-pooler`, ou sem `?sslmode=require` |
+| API cai com `password authentication failed` | usuario/senha dentro do `DB_URL`; eles vao em `DB_USER` e `DB_PASSWORD` |
+| Login nao entra / erro de conexao no front | `API_URL` errado na Vercel, com barra no final, ou sem redeploy depois de trocar |
+| Primeira requisicao do dia demora | o Neon gratis "dorme" quando fica parado; acorda em alguns segundos |
+
+**Custos:** Neon e Vercel tem plano gratis suficiente para o trabalho. O Railway da um credito
+de teste e depois cobra o plano Hobby (cerca de US$ 5/mes).
+
+---
+
 ## Estrutura de pastas
 
 ### Backend — `java/`

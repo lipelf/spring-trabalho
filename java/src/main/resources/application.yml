@@ -1,3 +1,7 @@
+server:
+  # o Railway informa a porta pela variavel PORT; localmente fica a 8080
+  port: ${PORT:8080}
+
 spring:
   application:
     name: soundhub
@@ -29,4 +33,4 @@ springdoc:
 
 logging:
   level:
-    com.soundhub: DEBUG
+    com.soundhub: ${LOG_LEVEL:DEBUG}   # em producao, LOG_LEVEL=INFO
