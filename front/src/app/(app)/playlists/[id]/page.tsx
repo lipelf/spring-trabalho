@@ -7,6 +7,7 @@ import { AdicionarMusicaDialog } from "@/components/playlist/adicionar-musica-di
 import { EstadoVazio } from "@/components/comum/estado-vazio";
 import { ExcluirPlaylistBotao } from "@/components/playlist/excluir-playlist-botao";
 import { ListaMusicas } from "@/components/playlist/lista-musicas";
+import { RecomendacoesIa } from "@/components/playlist/recomendacoes-ia";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/errors";
@@ -127,6 +128,10 @@ export default async function PlaylistDetalhePage({ params }: Props) {
           musicas={playlist.musicas}
           podeEditar={ehDono}
         />
+      )}
+
+      {ehDono && playlist.musicas.length > 0 && (
+        <RecomendacoesIa playlistId={playlist.id} />
       )}
     </>
   );

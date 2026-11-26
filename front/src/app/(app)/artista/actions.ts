@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import * as api from "@/lib/api/artistas";
 import * as apiMusicas from "@/lib/api/musicas";
+import * as apiIa from "@/lib/api/ia";
 import { ApiError, mensagemDeErro } from "@/lib/api/errors";
 import { albumSchema, artistaSchema, musicaSchema } from "@/lib/schemas";
 
@@ -214,6 +215,16 @@ export async function atualizarMusicaAction(
   revalidatePath("/descobrir");
   revalidatePath(`/musicas/${id}`);
   redirect("/artista");
+}
+
+/** Só sugere: as categorias voltam para o formulário, que marca e deixa o artista revisar. */
+export async function sugerirCategoriasAction(titulo: string) {
+  try {
+    const categorias = await apiIa.sugerirCategorias(titulo);
+    return { ok: true as const, categorias };
+  } catch (erro) {
+    return { ok: false as const, erro: mensagemDeErro(erro) };
+  }
 }
 
 export async function excluirMusicaAction(id: number) {

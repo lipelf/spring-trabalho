@@ -1,11 +1,15 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
-import type { EstadoForm } from "@/app/(app)/artista/actions";
+import {
+  sugerirCategoriasAction,
+  type EstadoForm,
+} from "@/app/(app)/artista/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +53,37 @@ export function MusicaForm({
     musica?.categorias.map((c) => c.id) ?? [],
   );
 
+  const [titulo, setTitulo] = useState(musica?.titulo ?? "");
+  const [sugerindo, startSugerir] = useTransition();
+
+  /** Soma as sugestões às categorias já marcadas, sem passar do limite. */
+  function sugerirCategorias() {
+    if (!titulo.trim()) {
+      toast.error("Preencha o título antes de pedir sugestões.");
+      return;
+    }
+    startSugerir(async () => {
+      const resultado = await sugerirCategoriasAction(titulo.trim());
+      if (!resultado.ok) {
+        toast.error(resultado.erro);
+        return;
+      }
+      if (resultado.categorias.length === 0) {
+        toast.info("A IA não encontrou categorias para esta música.");
+        return;
+      }
+      setSelecionadas((atuais) => {
+        const novas = resultado.categorias
+          .map((c) => c.id)
+          .filter((id) => !atuais.includes(id));
+        return [...atuais, ...novas].slice(0, MAX_CATEGORIAS);
+      });
+      toast.success(
+        `Sugeridas: ${resultado.categorias.map((c) => c.nome).join(", ")}`,
+      );
+    });
+  }
+
   const minutosIniciais = musica ? Math.floor(musica.duracao / 60) : "";
   const segundosIniciais = musica ? musica.duracao % 60 : "";
 
@@ -79,7 +114,8 @@ export function MusicaForm({
         <Input
           id="titulo"
           name="titulo"
-          defaultValue={musica?.titulo}
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
           placeholder="Nome da música"
           maxLength={150}
           aria-invalid={Boolean(estado.campos?.titulo)}
@@ -171,11 +207,24 @@ export function MusicaForm({
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-bold">
-          Categorias{" "}
-          <span className="font-normal text-texto-fraco">
-            (até {MAX_CATEGORIAS}, opcional)
+        {/* legend precisa ser filho direto do fieldset; o botão fica dentro dela */}
+        <legend className="mb-2 flex w-full items-center justify-between gap-2 text-sm font-bold">
+          <span>
+            Categorias{" "}
+            <span className="font-normal text-texto-fraco">
+              (até {MAX_CATEGORIAS}, opcional)
+            </span>
           </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={sugerirCategorias}
+            disabled={sugerindo}
+          >
+            <Sparkles className="size-4 text-marca dark:text-marca-clara" />
+            {sugerindo ? "Pensando..." : "Sugerir com IA"}
+          </Button>
         </legend>
 
         {selecionadas.map((id) => (

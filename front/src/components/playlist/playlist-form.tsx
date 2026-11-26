@@ -1,11 +1,15 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { AlertCircle, Globe, Lock } from "lucide-react";
+import { AlertCircle, Globe, Lock, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
-import type { EstadoPlaylist } from "@/app/(app)/playlists/actions";
+import {
+  gerarDescricaoAction,
+  type EstadoPlaylist,
+} from "@/app/(app)/playlists/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +41,25 @@ export function PlaylistForm({
 }) {
   const [estado, formAction] = useActionState<EstadoPlaylist, FormData>(action, {});
   const [publica, setPublica] = useState(playlist?.publica ?? true);
+  // nome e descrição controlados para a IA ler o nome e preencher a descrição
+  const [nome, setNome] = useState(playlist?.nome ?? "");
+  const [descricao, setDescricao] = useState(playlist?.descricao ?? "");
+  const [gerando, startGerar] = useTransition();
+
+  function gerarDescricao() {
+    if (!nome.trim()) {
+      toast.error("Dê um nome à playlist antes de pedir a descrição.");
+      return;
+    }
+    startGerar(async () => {
+      const resultado = await gerarDescricaoAction(nome.trim(), playlist?.id);
+      if (resultado.ok) {
+        setDescricao(resultado.texto);
+      } else {
+        toast.error(resultado.erro);
+      }
+    });
+  }
 
   return (
     <form action={formAction} className="max-w-lg space-y-6" noValidate>
@@ -61,7 +84,8 @@ export function PlaylistForm({
         <Input
           id="nome"
           name="nome"
-          defaultValue={playlist?.nome}
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
           placeholder="Ex.: Para estudar"
           maxLength={100}
           aria-invalid={Boolean(estado.campos?.nome)}
@@ -72,13 +96,27 @@ export function PlaylistForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="descricao">
-          Descrição <span className="text-texto-fraco">(opcional)</span>
-        </Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="descricao">
+            Descrição <span className="text-texto-fraco">(opcional)</span>
+          </Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={gerarDescricao}
+            disabled={gerando}
+          >
+            <Sparkles className="size-4 text-marca dark:text-marca-clara" />
+            {gerando ? "Gerando..." : "Gerar com IA"}
+          </Button>
+        </div>
         <Textarea
           id="descricao"
           name="descricao"
-          defaultValue={playlist?.descricao ?? ""}
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value)}
+          readOnly={gerando}
           placeholder="Do que se trata esta playlist?"
           maxLength={300}
           rows={3}

@@ -97,6 +97,11 @@ public class GlobalExceptionHandler {
         return erro(HttpStatus.CONFLICT, ex.getMessage(), req);
     }
 
+    @ExceptionHandler(IaIndisponivelException.class)
+    public ResponseEntity<ErroResponseDTO> iaIndisponivel(IaIndisponivelException ex, HttpServletRequest req) {
+        return erro(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), req);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErroResponseDTO> integridade(DataIntegrityViolationException ex, HttpServletRequest req) {
         log.warn("Violacao de integridade em {}: {}", req.getRequestURI(), ex.getMostSpecificCause().getMessage());
