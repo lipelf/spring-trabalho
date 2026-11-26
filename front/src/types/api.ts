@@ -88,6 +88,13 @@ export interface ErroResponse {
   campos?: Record<string, string>;
 }
 
+// ===== IA (Gemini) =====
+
+/** POST /ia/playlists/descricao. */
+export interface TextoIa {
+  texto: string;
+}
+
 // ===== Artista e Album (Gustavo) =====
 
 export interface ArtistaResumo {

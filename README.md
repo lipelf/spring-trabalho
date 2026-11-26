@@ -98,6 +98,17 @@ mvnw.cmd spring-boot:run
 A API sobe em `http://localhost:8080`. O Flyway cria e versiona as tabelas sozinho na primeira
 execucao — nao e preciso rodar nenhum SQL na mao.
 
+**IA (opcional).** Os recursos de IA usam o Gemini, que e gratuito. Gere uma chave em
+<https://aistudio.google.com/apikey> e defina a variavel antes de subir a API:
+
+```bash
+export GEMINI_API_KEY="sua-chave"        # Git Bash
+$env:GEMINI_API_KEY = "sua-chave"        # PowerShell
+```
+
+Sem a chave a API sobe normalmente; so as rotas `/ia` respondem `503`. O modelo padrao e o
+`gemini-flash-lite-latest`, apelido que o Google mantem apontando para o Flash-Lite mais novo (rapido e com a maior cota gratuita) (troque com `GEMINI_MODELO`). Nunca coloque a chave no codigo ou no git.
+
 ### 4. Rodar o front
 
 Em outro terminal:
@@ -176,6 +187,7 @@ Faca nessa ordem: banco → API → front → voltar na API para liberar o CORS.
    | `JWT_SECRET` | uma chave nova em Base64 (veja abaixo) — **nao use a padrao do yml** |
    | `PORT` | `8080` |
    | `LOG_LEVEL` | `INFO` |
+   | `GEMINI_API_KEY` | chave do Gemini (opcional — sem ela so a IA fica fora) |
    | `CORS_ORIGENS` | deixe para o passo 4 |
 
    Para gerar o `JWT_SECRET`, no Git Bash: `openssl rand -base64 48`
@@ -446,6 +458,14 @@ musicas; apenas o `ARTISTA` pode cadastrar albuns e musicas.
 | POST | `/categorias` | Cria (so ARTISTA) |
 | PUT | `/categorias/{id}` | Renomeia (so ARTISTA) |
 | DELETE | `/categorias/{id}` | Exclui (so ARTISTA, e so se nenhuma musica usar) |
+
+### IA (Gemini)
+
+| Metodo | Rota | Descricao |
+|---|---|---|
+| POST | `/ia/playlists/descricao` | Gera a descricao da playlist a partir do nome e das musicas |
+| POST | `/ia/musicas/categorias` | Sugere categorias existentes para uma musica (so ARTISTA) |
+| GET | `/ia/playlists/{id}/recomendacoes` | Recomenda ate 5 musicas do catalogo (so o dono) |
 
 ### Avaliacao
 

@@ -27,6 +27,15 @@ jwt:
   secret: ${JWT_SECRET:c291bmRodWItY2hhdmUtc2VjcmV0YS1kZS1kZXNlbnZvbHZpbWVudG8tbWluaW1vLTI1Ni1iaXRzLW9r}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}   # 24h
 
+ia:
+  gemini:
+    # Chave gratuita em https://aistudio.google.com/apikey. Sem ela a API sobe normalmente
+    # e as rotas /ia respondem 503 ("IA nao configurada").
+    api-key: ${GEMINI_API_KEY:}
+    # Endpoint do Gemini compativel com a API da OpenAI (por isso o langchain4j-open-ai serve)
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
+    modelo: ${GEMINI_MODELO:gemini-flash-lite-latest}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import * as api from "@/lib/api/playlists";
+import * as apiIa from "@/lib/api/ia";
 import { ApiError, mensagemDeErro } from "@/lib/api/errors";
 import { playlistSchema } from "@/lib/schemas";
 
@@ -95,6 +96,26 @@ export async function adicionarMusicaAction(playlistId: number, musicaId: number
     revalidatePath(`/playlists/${playlistId}`);
     revalidatePath("/playlists");
     return { ok: true as const };
+  } catch (erro) {
+    return { ok: false as const, erro: mensagemDeErro(erro) };
+  }
+}
+
+// ===== IA =====
+
+export async function gerarDescricaoAction(nome: string, playlistId?: number) {
+  try {
+    const { texto } = await apiIa.gerarDescricaoPlaylist(nome, playlistId);
+    return { ok: true as const, texto };
+  } catch (erro) {
+    return { ok: false as const, erro: mensagemDeErro(erro) };
+  }
+}
+
+export async function recomendarMusicasAction(playlistId: number) {
+  try {
+    const musicas = await apiIa.recomendarMusicas(playlistId);
+    return { ok: true as const, musicas };
   } catch (erro) {
     return { ok: false as const, erro: mensagemDeErro(erro) };
   }

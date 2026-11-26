@@ -50,7 +50,7 @@ Nunca conclua uma tarefa sem executar. Compilar não é testar.
 
 ```bash
 cd java
-./mvnw test                    # 43 testes; usa H2, não precisa de Docker
+./mvnw test                    # 52 testes; usa H2, não precisa de Docker
 ./mvnw spring-boot:run         # sobe de verdade contra o Postgres
 ```
 

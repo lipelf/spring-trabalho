@@ -435,6 +435,41 @@ Regras que o front precisa respeitar:
 > por categoria na URL (`?aba=musicas&q=...&categoria=...`). `/musicas/[id]` mostra o detalhe
 > com a media, as avaliacoes, o botao de avaliar e o de adicionar a uma playlist.
 
+#### IA (Gemini) — exige token
+
+A API usa o **Gemini** do Google (plano gratuito) pelo LangChain4j. As rotas **so sugerem**:
+nada e gravado, e o usuario decide no formulario se usa o resultado.
+
+| Metodo | Rota                                | Observacao                                                                 |
+| ------ | ----------------------------------- | -------------------------------------------------------------------------- |
+| POST   | `/ia/playlists/descricao`           | `{ nome, playlistId? }` → `TextoIa`. Com `playlistId`, usa as musicas dela — so o dono |
+| POST   | `/ia/musicas/categorias`            | `{ titulo }` → `Categoria[]` (ate 3, so categorias que existem) — so ARTISTA |
+| GET    | `/ia/playlists/{id}/recomendacoes`  | `MusicaResumo[]` (ate 5, nenhuma ja na playlist) — so o dono               |
+
+```ts
+export interface TextoIa {
+  texto: string; // ja cortado em 300 caracteres, o limite da descricao
+}
+```
+
+Regras que o front precisa respeitar:
+
+- **`503` quando a IA nao esta disponivel**: chave `GEMINI_API_KEY` nao configurada no
+  servidor, limite do plano gratuito, timeout. Mostre a `mensagem` num toast e deixe o
+  formulario funcionando normalmente — a IA e um atalho, nunca um passo obrigatorio.
+- A chamada leva alguns segundos: desabilite o botao e mostre "Gerando..." enquanto espera.
+- `nome` (descricao) e `titulo` (categorias) obrigatorios → `400` com `campos`.
+- Recomendar com a playlist vazia → `400` ("Adicione pelo menos uma musica..."). Esconda o
+  botao enquanto a playlist nao tiver musica.
+- Playlist de outro usuario → `403`; inexistente → `404`.
+
+> **IA — o que o front faz.** `lib/api/ia.ts` tem uma funcao por rota. No `playlist-form`,
+> o botao **Gerar com IA** le o nome digitado e preenche a descricao (na edicao manda tambem o
+> `playlistId`). No `musica-form`, **Sugerir com IA** soma as categorias sugeridas as ja
+> marcadas, respeitando o limite de 5. Na pagina da playlist, o dono ve o painel
+> **Recomendacoes da IA** (`components/playlist/recomendacoes-ia.tsx`), com um clique para
+> adicionar cada musica.
+
 ### Tratamento de erros
 
 Toda falha volta no mesmo formato. Centralize o parsing:
@@ -475,6 +510,7 @@ export async function parseErro(res: Response): Promise<never> {
 | 409    | Duplicado                     | Mensagem especifica (nome em uso, ja avaliou, musica ja na playlist)                                               |
 | 429    | Muitas tentativas de login    | Mostra a `mensagem` da API e uma contagem regressiva baseada em `Retry-After`; desabilita o login durante a espera |
 | 500    | Erro no servidor              | Toast generico; nao exponha detalhes                                                                               |
+| 503    | IA indisponivel (rotas `/ia`) | Toast com a `mensagem`; o formulario continua funcionando sem a IA                                                 |
 
 Quando vier `400` com `campos`, mapeie direto para os erros do formulario:
 
